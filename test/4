@@ -1,1 +1,2 @@
-let {a} = 12 ;;
+let {a=b; c} = 12 in 13
+let {d;e;} = 100 in 200

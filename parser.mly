@@ -80,8 +80,10 @@ statement:
 
 pattern:
 | p = simple_pattern        { p }
-| psec = pattern_tuple %prec below_COMMA
+| psec = pattern_tuple /* %prec below_COMMA */
   { pattern $startpos $endpos (Ppat_tuple (List.rev psec)) }
+| LBRACE p = pattern_record RBRACE
+  { pattern $startpos $endpos (Ppat_record p) }
 
 %inline simple_pattern:
 | UNDERBAR                  { pattern $startpos $endpos Ppat_any }
@@ -89,10 +91,34 @@ pattern:
 | v = lident                { pattern $startpos $endpos (Ppat_var v) }
 | LPAREN p = pattern RPAREN { p }
 
-
 pattern_tuple:
 | seq = pattern_tuple; COMMA; p = simple_pattern { p :: seq }
 | p = simple_pattern                                    { [p] }
+
+pattern_record:
+| v = label; o = record_right; SEMICOLON; fps = pattern_record
+  { let p = match o with
+    | None -> pattern $startpos $endpos (Ppat_var v) | Some p -> p in
+    (v, p) :: fps
+  }
+| v = label; o = record_right
+  { let p = match o with
+    | None -> pattern $startpos $endpos (Ppat_var v) | Some p -> p in
+    [(v, p)]
+  }
+| v = label; o = record_right; SEMICOLON /* to allow extra semicolon */
+  { let p = match o with
+    | None -> pattern $startpos $endpos (Ppat_var v) | Some p -> p in
+    [(v, p)]
+  }
+
+record_right:
+| /* empty */ { None }
+| EQUAL; p = pattern {Some p}
+
+label:
+| v = ident { v }
+
 
 ident:
 | l = LIDENT { longident $startpos $endpos (Longident.Pident l) }
