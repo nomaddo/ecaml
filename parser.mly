@@ -40,7 +40,7 @@ let longident pos_start pos_end desc =
 %token PLUS MINUS PLUS_DOT MINUS_DOT
 %token AST SLASH AST_DOT SLASH_DOT
 
-%left PLUS MINUS /* lowest precedence */
+%left PLUS MINUS
 
 %token EQUAL
 
@@ -49,6 +49,7 @@ let longident pos_start pos_end desc =
 
 %token DOT
 %token COMMA
+%nonassoc below_COMMA
 %left COMMA
 %token LESS_MINUS
 
@@ -60,7 +61,6 @@ let longident pos_start pos_end desc =
 %token <string> UIDENT
 
 %token UNDERBAR
-%nonassoc below_COMMA
 
 %{
 open Syntax
@@ -77,23 +77,24 @@ toplevel:
 
 statement:
 | e = expression SEMISEMI { Exp e }
+| e = expression { Exp e }
 
 pattern:
 | p = simple_pattern        { p }
-| psec = pattern_tuple /* %prec below_COMMA */
+| psec = pattern_tuple %prec below_COMMA
   { pattern $startpos $endpos (Ppat_tuple (List.rev psec)) }
 | LBRACE p = pattern_record RBRACE
   { pattern $startpos $endpos (Ppat_record p) }
 
-%inline simple_pattern:
+simple_pattern:
 | UNDERBAR                  { pattern $startpos $endpos Ppat_any }
 | LPAREN RPAREN             { pattern $startpos $endpos Ppat_unit }
 | v = lident                { pattern $startpos $endpos (Ppat_var v) }
 | LPAREN p = pattern RPAREN { p }
 
 pattern_tuple:
-| seq = pattern_tuple; COMMA; p = simple_pattern { p :: seq }
-| p = simple_pattern                                    { [p] }
+| seq = pattern_tuple; COMMA; p = pattern { p :: seq }
+| p1 = pattern; COMMA; p2 = pattern       { [p2; p1] }
 
 pattern_record:
 | v = label; o = record_right; SEMICOLON; fps = pattern_record
@@ -114,7 +115,7 @@ pattern_record:
 
 record_right:
 | /* empty */ { None }
-| EQUAL; p = pattern {Some p}
+| EQUAL; p = pattern { Some p }
 
 label:
 | v = ident { v }
