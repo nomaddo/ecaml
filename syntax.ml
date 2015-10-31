@@ -20,6 +20,9 @@ and expression_desc =
   | Seq of expression * expression
   | Var of Longident.t
   | Let of rec_flag * (pattern * expression) list * expression
+  | App of expression list
+  | Record of (Longident.t * expression) list
+  | Tuple of expression list
 with sexp
 
 type type_decl = unit with sexp
